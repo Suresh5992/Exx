@@ -147,3 +147,47 @@ User search base: Optionally, specify the search base for users.
 Manager DN and Manager Password: If needed, provide a bind DN and password to connect to the LDAP server.
 Save the configuration.
 Jenkins should now be configured to authenticate users against your LDAP server
+version: '3'
+
+services:
+  ldap:
+    image: osixia/openldap:1.5.0
+    container_name: ldap-server
+    environment:
+      LDAP_ORGANISATION: "My Organization"
+      LDAP_DOMAIN: "my-domain.com"
+      LDAP_ADMIN_PASSWORD: "adminpassword"
+    ports:
+      - "389:389"
+      - "636:636"
+    volumes:
+      - ./ldap-data:/var/lib/ldap
+      - ./ldap-config:/etc/ldap/slapd.d
+
+  phpldapadmin:
+    image: osixia/phpldapadmin:0.9.0
+    container_name: phpldapadmin
+    environment:
+      PHPLDAPADMIN_LDAP_HOSTS: ldap-server
+    ports:
+      - "8080:80"
+    depends_on:
+      - ldap
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    environment:
+      JENKINS_OPTS: --httpPort=8081
+    ports:
+      - "8081:8081"
+      - "50000:50000"
+    volumes:
+      - ./jenkins_home:/var/jenkins_home
+    depends_on:
+      - ldap
+    environment:
+      JENKINS_ADMIN_ID: "admin"
+      JENKINS_ADMIN_PASSWORD: "adminpassword"
+    volumes:
+      - ./jenkins_home:/var/jenkins_home
